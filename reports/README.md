@@ -1,4 +1,4 @@
-[Back to root directory](../README.md)
+[Back](../README.md)
 # Biweekly Reports
 
 ## Schedule
