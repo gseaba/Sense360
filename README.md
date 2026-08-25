@@ -1,4 +1,4 @@
-# Senior-Project
+# Sense360
 
 Senior Design class project repository.
 
