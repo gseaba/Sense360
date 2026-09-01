@@ -1,11 +1,11 @@
-[Back](../md
+[Back](../README.md)
 
 # Hardware Information
 
 ## Bill of Materials
 
 Track components, unit costs, and datasheet links in clean text tables.  
-./bom.md
+[BOM](./bom.md)
 
 ### Current Purchases
 
