@@ -7,19 +7,17 @@
 > - [SW] ~ Software 
 
 ## In Progress
-- [ ] **[LG]** Add to Todo list (@Bowen)
-- [ ] **[LG]** Update Project Propasal
-- [ ] **[LG]** Finalize Design
-- [ ] **[LG]** Establish Weekly meetings (@all)
-- [ ] **[LG]** Order Parts (@Bowen)
 - [ ] **[LG]** Begin Testing and Building
 - [ ] **[LG]** Keep up with Documentation (@Jane)
+- [ ] Correspondence with Dr. Braun (@Jane)
+- [ ] Test distance accuracy (@Bowen)
+- [ ] Build simple code for prototype (@Garrett)
 ## Upcoming
-- [ ] Building
-- [ ] Coding
 - [ ] Testing
 - [ ] Updating Design
 - [ ] Buy new parts
 - [ ] Upgrade
 ## Done
 - [x] **[LG]** Create repository (@Garrett)
+- [x] **[LG]** Order Parts (@Bowen)
+- [x] **[LG]** Update Project Propasal
