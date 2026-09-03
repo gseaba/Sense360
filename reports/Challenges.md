@@ -80,3 +80,76 @@ ssh sense@raspi.local
 ```
 
 Overall, the setup process demonstrated several potential challenges with headless Raspberry Pi configuration, including USB networking limitations, managed university network behavior, stored SSH host keys, and unknown factory credentials. Re-imaging the microSD card with a known configuration provided the most reliable solution.
+
+## BNO085 IMU Integration Notes
+
+### Initial Setup
+
+The BNO085 was first connected to the Raspberry Pi hardware I2C bus.
+
+| BNO085 Pin | Raspberry Pi |
+| :--- | :--- |
+| VCC | 3.3 V - Pin 1 |
+| GND | GND - Pin 6 |
+| SDA | GPIO2 - Pin 3 |
+| SCL | GPIO3 - Pin 5 |
+
+The IMU was detected at address `0x4B`.
+
+### Problems Encountered
+
+The required Python libraries initially failed to install because `swig` and the `lgpio` system library were missing.
+
+```bash
+sudo apt install swig python3-dev build-essential
+sudo apt install liblgpio-dev
+```
+
+After installation, the BNO085 communicated with the Pi but produced frequent corrupted I2C packets.
+
+Common errors included:
+
+```text
+KeyError: 123
+KeyError: 255
+IndexError: list assignment index out of range
+```
+
+Increasing the hardware I2C speed to 400 kHz improved communication slightly, but errors still occurred too frequently.
+
+The code was also modified to ignore corrupted packets and reuse the last valid heading. This kept the program from crashing but did not solve the underlying communication problem.
+
+### Final Solution
+
+The BNO085 was moved to a separate software I2C bus.
+
+| BNO085 Pin | BCM GPIO | Physical Pin |
+| :--- | :---: | ---: |
+| VCC | - | 1 |
+| GND | - | 6 |
+| SDA | GPIO20 | 38 |
+| SCL | GPIO21 | 40 |
+
+The following line was added to `/boot/firmware/config.txt`:
+
+```text
+dtoverlay=i2c-gpio,bus=8,i2c_gpio_sda=20,i2c_gpio_scl=21
+```
+
+The Python code was changed to use software I2C bus 8:
+
+```python
+from adafruit_extended_bus import ExtendedI2C as I2C
+
+i2c = I2C(8)
+bno = BNO08X_I2C(i2c, address=0x4B)
+```
+
+### Final I2C Architecture
+
+| Device | Bus | SDA | SCL | Address |
+| :--- | :--- | :--- | :--- | :--- |
+| PCA9685 | Hardware I2C Bus 1 | GPIO2 / Pin 3 | GPIO3 / Pin 5 | `0x40` |
+| BNO085 | Software I2C Bus 8 | GPIO20 / Pin 38 | GPIO21 / Pin 40 | `0x4B` |
+
+Moving the BNO085 to software I2C eliminated the frequent corrupted-packet errors and provided stable IMU communication.
