@@ -1,8 +1,7 @@
 import time
 import math
-import board
-import busio
 
+from adafruit_extended_bus import ExtendedI2C as I2C
 from adafruit_bno08x import BNO_REPORT_ROTATION_VECTOR
 from adafruit_bno08x.i2c import BNO08X_I2C
 
@@ -11,10 +10,12 @@ from adafruit_bno08x.i2c import BNO08X_I2C
 # I2C / BNO085 Setup
 # -----------------------------
 
-i2c = busio.I2C(board.SCL, board.SDA)
+i2c = I2C(8)
 
-# Your BNO085 is at address 0x4B
-bno = BNO08X_I2C(i2c, address=0x4B)
+bno = BNO08X_I2C(
+    i2c,
+    address=0x4B
+)
 
 # Enable fused orientation output
 bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
