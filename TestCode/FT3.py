@@ -54,7 +54,7 @@ candidate_distance = None
 candidate_count = 0
 
 CHANGE_THRESHOLD = 15       # cm
-CANDIDATE_TOLERANCE = 10    # cm
+CANDIDATE_TOLERANCE = 15    # cm
 REQUIRED_READINGS = 3
 
 
