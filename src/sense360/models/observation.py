@@ -1,19 +1,22 @@
 """
 observation.py
 
-Defines the standard format used to pass sensor measurements through
-the Sense360 software.
+Defines the standard data format used for environmental sensor
+measurements throughout Sense360.
 
-All distance-sensing hardware should convert its raw measurements into
-Observation objects. This keeps the WorldModel independent of the
-specific sensor hardware being used.
+Every environmental sensor should convert its hardware-specific output
+into one or more Observation objects before passing data to the rest of
+the system.
 
-For example:
-    - An HC-SR04 may create one Observation per measurement.
-    - A LiDAR may create hundreds of Observations per scan.
+This creates a common interface between sensors and the WorldModel.
 
-The rest of the system only needs to understand Observation objects,
-not how the physical sensor generated them.
+Examples:
+    - An HC-SR04 may generate one Observation per measurement.
+    - A LiDAR scanner may generate hundreds of Observations per scan.
+    - A future time-of-flight sensor can use the same format.
+
+The WorldModel should not need to know which type of sensor created an
+Observation. It only needs the measurement data contained within it.
 """
 
 from dataclasses import dataclass
@@ -21,7 +24,52 @@ from dataclasses import dataclass
 
 @dataclass
 class Observation:
-    """Represents one distance measurement in a particular direction."""
+    """
+    Represents one measurement of an object in the environment.
+
+    Attributes
+    ----------
+    distance_m : float
+        Measured distance to the object in meters.
+
+    relative_angle_deg : float
+        Direction of the measurement relative to the Sense360 belt.
+
+        Suggested convention:
+            0 degrees   = directly forward
+            90 degrees  = right
+            180 degrees = behind
+            270 degrees = left
+
+        The WorldModel can combine this relative angle with the wearer's
+        heading from the MotionTracker to determine the measurement's
+        direction in the surrounding environment.
+
+    timestamp : float
+        Time when the measurement was taken.
+
+        Sense360 uses time.monotonic() timestamps so the age of sensor
+        data can be calculated reliably without being affected by changes
+        to the Raspberry Pi's system clock.
+
+    sensor_id : str
+        Identifier for the sensor that produced the measurement.
+
+        Examples:
+            "sensor_1"
+            "front_ultrasonic"
+            "lidar_1"
+
+    confidence : float
+        Estimate of how trustworthy the measurement is.
+
+        Expected range:
+            0.0 = no confidence
+            1.0 = full confidence
+
+        HC-SR04 measurements can initially use 1.0 for valid readings.
+        More advanced confidence calculations can be added later.
+    """
 
     distance_m: float
     relative_angle_deg: float

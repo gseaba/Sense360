@@ -4,31 +4,26 @@ hcsr04.py
 Implements the Sensor interface for an HC-SR04 ultrasonic distance sensor.
 
 This class is responsible for all hardware-specific behavior required
-to obtain a distance measurement from one HC-SR04 sensor.
+to obtain distance measurements from one HC-SR04.
 
 Responsibilities:
-    - Configure the TRIG GPIO as an output.
-    - Configure the ECHO GPIO as an input.
-    - Generate the 10 microsecond trigger pulse required by the HC-SR04.
-    - Measure the duration of the returned echo pulse.
+    - Configure the TRIG and ECHO GPIO pins.
+    - Generate the ultrasonic trigger pulse.
+    - Measure the returned echo pulse.
     - Convert echo travel time into distance.
-    - Detect measurements that time out or fall outside the useful
-      operating range of the sensor.
-    - Convert successful measurements into the standard Sense360
-      Observation format.
-    - Release GPIO resources when the sensor is shut down.
+    - Prevent the sensor from firing too frequently.
+    - Detect timeouts and invalid measurements.
+    - Convert successful measurements into Observation objects.
+    - Release GPIO resources during shutdown.
 
-This class intentionally does NOT:
-    - Filter temporary obstacles such as the wearer's arm.
-    - Decide whether an observation should modify the WorldModel.
+This class does NOT:
+    - Decide whether a measurement belongs in the WorldModel.
+    - Reject transient obstacles such as the wearer's arm.
     - Control vibration motors.
-    - Perform navigation logic.
+    - Perform navigation or mapping logic.
 
-Those responsibilities belong elsewhere in the Sense360 software.
-
-The HC-SR04 ECHO output is approximately 5 V and MUST be reduced before
-being connected to a Raspberry Pi GPIO input. Sense360 currently uses
-a resistor voltage divider on the ECHO connection.
+The HC-SR04 ECHO signal is approximately 5 V and must pass through
+a voltage divider before reaching the Raspberry Pi GPIO input.
 """
 
 import time
@@ -55,6 +50,7 @@ class HCSR04(Sensor):
         min_distance_m: float = 0.02,
         max_distance_m: float = 4.0,
         timeout_s: float = 0.03,
+        min_measurement_interval_s: float = 0.06,
         chip_handle=None,
     ):
         """
@@ -62,41 +58,40 @@ class HCSR04(Sensor):
 
         Parameters
         ----------
-        sensor_id:
-            Human-readable identifier for the sensor.
-            Example: "front" or "sensor_1"
+        sensor_id : str
+            Unique name for this sensor.
 
-        trig_pin:
-            BCM GPIO number connected to HC-SR04 TRIG.
+        trig_pin : int
+            BCM GPIO number connected to TRIG.
 
-        echo_pin:
-            BCM GPIO number connected to HC-SR04 ECHO through
-            the voltage divider.
+        echo_pin : int
+            BCM GPIO number connected to ECHO through the voltage divider.
 
-        relative_angle_deg:
+        relative_angle_deg : float
             Direction the sensor faces relative to the belt.
 
-            Suggested convention:
+            Convention:
                 0 degrees   = front
                 90 degrees  = right
                 180 degrees = rear
                 270 degrees = left
 
-        min_distance_m:
-            Minimum distance that will be accepted as physically valid.
+        min_distance_m : float
+            Minimum accepted distance.
 
-        max_distance_m:
-            Maximum distance that will be accepted as physically valid.
+        max_distance_m : float
+            Maximum accepted distance.
 
-        timeout_s:
-            Maximum amount of time to wait for the ECHO signal.
+        timeout_s : float
+            Maximum amount of time to wait for an echo transition.
 
-        chip_handle:
-            Optional existing lgpio chip handle.
+        min_measurement_interval_s : float
+            Minimum time allowed between ultrasonic trigger pulses.
 
-            If no handle is supplied, this object opens gpiochip0 itself.
-            A shared handle can later be supplied if multiple sensors are
-            managed through one GPIO connection.
+        chip_handle
+            Optional existing lgpio GPIO chip handle.
+
+            If no handle is supplied, this sensor opens gpiochip0 itself.
         """
 
         self.sensor_id = sensor_id
@@ -107,10 +102,12 @@ class HCSR04(Sensor):
         self.min_distance_m = min_distance_m
         self.max_distance_m = max_distance_m
         self.timeout_s = timeout_s
+        self.min_measurement_interval_s = min_measurement_interval_s
 
+        self.last_measurement_time = None
         self._closed = False
 
-        # If no GPIO chip was supplied, open gpiochip0 ourselves.
+        # Open gpiochip0 if a shared handle was not supplied.
         if chip_handle is None:
             self.chip = lgpio.gpiochip_open(0)
             self._owns_chip = True
@@ -118,7 +115,7 @@ class HCSR04(Sensor):
             self.chip = chip_handle
             self._owns_chip = False
 
-        # Configure TRIG as an output initially LOW.
+        # Configure TRIG as an output starting LOW.
         lgpio.gpio_claim_output(
             self.chip,
             self.trig_pin,
@@ -131,18 +128,39 @@ class HCSR04(Sensor):
             self.echo_pin
         )
 
-        # Give the sensor a moment to settle after initialization.
+        # Allow the sensor to stabilize after initialization.
         time.sleep(0.05)
+
+    def _ready_for_measurement(self):
+        """
+        Determine whether enough time has passed to fire again.
+
+        Returns
+        -------
+        bool
+            True if the sensor may take another measurement.
+            False if it must wait longer.
+        """
+
+        if self.last_measurement_time is None:
+            return True
+
+        elapsed_time = (
+            time.monotonic()
+            - self.last_measurement_time
+        )
+
+        return elapsed_time >= self.min_measurement_interval_s
 
     def _send_trigger_pulse(self):
         """
-        Send the trigger pulse that begins an HC-SR04 measurement.
+        Send the trigger pulse required by the HC-SR04.
 
-        The HC-SR04 requires a HIGH pulse of at least approximately
-        10 microseconds on the TRIG input.
+        The HC-SR04 begins a measurement when TRIG is held HIGH
+        for approximately 10 microseconds.
         """
 
-        # Make certain TRIG starts LOW.
+        # Ensure TRIG begins LOW.
         lgpio.gpio_write(
             self.chip,
             self.trig_pin,
@@ -151,7 +169,7 @@ class HCSR04(Sensor):
 
         time.sleep(0.000002)
 
-        # Send 10 microsecond HIGH pulse.
+        # Send the 10 microsecond trigger pulse.
         lgpio.gpio_write(
             self.chip,
             self.trig_pin,
@@ -160,7 +178,6 @@ class HCSR04(Sensor):
 
         time.sleep(0.000010)
 
-        # Return TRIG LOW.
         lgpio.gpio_write(
             self.chip,
             self.trig_pin,
@@ -169,23 +186,18 @@ class HCSR04(Sensor):
 
     def read_distance(self):
         """
-        Perform one ultrasonic measurement.
+        Perform one ultrasonic distance measurement.
 
         Returns
         -------
         float | None
+            Distance in meters if a valid measurement is received.
 
-        Distance in meters when a valid echo is received.
-
-        Returns None when:
-            - ECHO never rises.
-            - ECHO never falls.
-            - The calculated distance is outside the accepted range.
-
-        A failed measurement is not treated as a new world measurement.
-        This allows previously stored WorldModel data to remain in place
-        and naturally become older instead of being overwritten by bad
-        sensor data.
+            Returns None when:
+                - The sensor is not yet allowed to fire again.
+                - ECHO never rises.
+                - ECHO never falls.
+                - The measured distance is outside the accepted range.
         """
 
         if self._closed:
@@ -193,11 +205,18 @@ class HCSR04(Sensor):
                 f"{self.sensor_id} cannot be read after cleanup()."
             )
 
+        # Prevent the HC-SR04 from firing too frequently.
+        if not self._ready_for_measurement():
+            return None
+
+        # Record the firing time before starting the measurement.
+        self.last_measurement_time = time.monotonic()
+
         self._send_trigger_pulse()
 
-        # -------------------------------------------------------------
-        # Wait for the beginning of the ECHO pulse.
-        # -------------------------------------------------------------
+        # ---------------------------------------------------------
+        # Wait for ECHO to go HIGH.
+        # ---------------------------------------------------------
 
         wait_start = time.monotonic()
 
@@ -206,41 +225,40 @@ class HCSR04(Sensor):
             if time.monotonic() - wait_start > self.timeout_s:
                 return None
 
-        # ECHO just went HIGH.
         pulse_start_ns = time.monotonic_ns()
 
-        # -------------------------------------------------------------
-        # Wait for the end of the ECHO pulse.
-        # -------------------------------------------------------------
+        # ---------------------------------------------------------
+        # Wait for ECHO to return LOW.
+        # ---------------------------------------------------------
 
         while lgpio.gpio_read(self.chip, self.echo_pin) == 1:
 
-            if (
+            elapsed_echo_time = (
                 time.monotonic_ns() - pulse_start_ns
-            ) / 1_000_000_000 > self.timeout_s:
+            ) / 1_000_000_000
 
+            if elapsed_echo_time > self.timeout_s:
                 return None
 
-        # ECHO just went LOW.
         pulse_end_ns = time.monotonic_ns()
 
-        # -------------------------------------------------------------
-        # Calculate distance.
-        # -------------------------------------------------------------
+        # ---------------------------------------------------------
+        # Convert echo duration into distance.
+        # ---------------------------------------------------------
 
         pulse_duration_s = (
             pulse_end_ns - pulse_start_ns
         ) / 1_000_000_000
 
-        # Sound travels to the object AND back to the sensor,
-        # so divide the total travel distance by two.
+        # Sound travels to the object and then back to the sensor,
+        # therefore the total distance traveled is divided by two.
         distance_m = (
             pulse_duration_s
             * self.SPEED_OF_SOUND_M_S
             / 2.0
         )
 
-        # Reject measurements outside the expected physical range.
+        # Reject physically unreasonable measurements.
         if not (
             self.min_distance_m
             <= distance_m
@@ -252,17 +270,21 @@ class HCSR04(Sensor):
 
     def get_observations(self):
         """
-        Perform one measurement and return standardized Sense360 data.
+        Attempt to obtain a new environmental observation.
 
-        HC-SR04 produces one directional distance measurement at a time,
-        so a successful measurement returns a list containing exactly
-        one Observation.
+        Returns
+        -------
+        list
+            One Observation when a valid measurement is available.
 
-        A failed measurement returns an empty list.
+            An empty list is returned when:
+                - The sensor is waiting for its next allowed firing time.
+                - The measurement times out.
+                - The measured distance is invalid.
 
-        Returning a list keeps this sensor compatible with future sensor
-        types such as LiDAR, which may return hundreds of observations
-        from a single scan.
+        Returning a list allows this sensor to use the same interface
+        as future sensors such as LiDAR scanners, which may return many
+        observations from a single scan.
         """
 
         distance_m = self.read_distance()
@@ -285,16 +307,12 @@ class HCSR04(Sensor):
         Release GPIO resources used by this sensor.
 
         This should be called when Sense360 shuts down.
-
-        If this sensor opened its own GPIO chip, the chip is also closed.
-        If the GPIO chip was supplied externally, only this sensor's GPIO
-        pins are released.
         """
 
         if self._closed:
             return
 
-        # Make sure TRIG is LOW before releasing it.
+        # Ensure TRIG is LOW before releasing the GPIO.
         try:
             lgpio.gpio_write(
                 self.chip,
@@ -304,7 +322,6 @@ class HCSR04(Sensor):
         except lgpio.error:
             pass
 
-        # Release both GPIO lines.
         try:
             lgpio.gpio_free(
                 self.chip,
@@ -321,7 +338,7 @@ class HCSR04(Sensor):
         except lgpio.error:
             pass
 
-        # Only close the entire GPIO chip if this object opened it.
+        # Only close the GPIO chip if this object opened it.
         if self._owns_chip:
             try:
                 lgpio.gpiochip_close(
@@ -334,12 +351,14 @@ class HCSR04(Sensor):
 
     def __enter__(self):
         """
-        Allow the sensor to optionally be used with a Python 'with' block.
+        Allow use of the sensor inside a Python 'with' block.
         """
+
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
-        Automatically clean up GPIO when leaving a 'with' block.
+        Automatically release GPIO resources when leaving a 'with' block.
         """
+
         self.cleanup()

@@ -24,7 +24,7 @@ Senior-Project
 ├── hardware/
 │   ├── README.md                  # Hardware overview & specs
 │   ├── bom.md                     # Bill of Materials & component costs
-│   ├── pinouts.md                 # MCU pin mapping & hardware interfaces
+│   ├── pinoutsPT1.md              # MCU pin mapping & hardware interfaces for first prototype
 │   └── schematics/                # Schematic files, SVGs, or PNG renders
 |—— src/
 |    └── sense360/
