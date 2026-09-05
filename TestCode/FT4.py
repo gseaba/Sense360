@@ -277,7 +277,7 @@ try:
                 amplitude / 100 * 65535
             )
 
-
+        # Print status
         print(
             f"Heading {heading:.1f} "
             f"Distance {distance:.1f} cm "
@@ -299,4 +299,3 @@ finally:
     motor.duty_cycle = 0
     pca.deinit()
     GPIO.cleanup()
-    

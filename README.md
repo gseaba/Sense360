@@ -18,12 +18,39 @@ Senior-Project
 ├── reports/
 │   ├── README.md                  # Instructions & submission log
 │   ├── 2026-08-25_biweekly-01.md
-│   └── ...
+│   ├── images_biweekly-01
+|   └── Sept1-15_Progress
+|       └── FirstFullSystemsTest.md
 ├── hardware/
 │   ├── README.md                  # Hardware overview & specs
 │   ├── bom.md                     # Bill of Materials & component costs
 │   ├── pinouts.md                 # MCU pin mapping & hardware interfaces
 │   └── schematics/                # Schematic files, SVGs, or PNG renders
-├── src/                           # Firmware / Software source files
-└── TODO.md                        # Master task list & status
+|—— src/
+|    └── sense360/
+|        │
+|        ├── sensors/
+|        │   ├── hcsr04.py
+|        │   └── sensor_manager.py
+|        │
+|        ├── motion/
+|        │   └── motion_tracker.py
+|        │
+|        ├── world/
+|        │   └── world_model.py
+|        │
+|        ├── haptics/
+|        │   └── haptic_system.py
+|        │
+|        ├── system/
+|        │   └── sense360_controller.py
+|        │
+|        └── models/
+|            └── observation.py
+|
+|—— config/
+|        hardware.yaml
+|
+|—— TestCode/
+    └── TODO.md                        # Master task list & status
 ```
