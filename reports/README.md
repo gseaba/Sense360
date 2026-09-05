@@ -14,6 +14,7 @@
 
 ## Biweekly Progression
 Sept 1-15 [Here](./Sept1-15_Progress/FirstFullSystemsTest.md)
+
 Sept 16-29 [Here]()
 
 ## Challenges
