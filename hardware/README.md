@@ -14,4 +14,4 @@ Track components, unit costs, and datasheet links in clean text tables.
 ## Pinnouts
 
 Pinnouts for Physical Hardware
-[Prototype 1](./Pi%20Pinnouts%20PT1.md)
+[Prototype 1](./PinnoutsPT1.md)
