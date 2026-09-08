@@ -218,7 +218,7 @@ HAPTIC_MOTORS = [
     {
         "motor_id": "motor_1",
         "pwm_channel": 0,
-        "relative_angle_deg": 0.0,
+        "relative_angle_deg": 90,
     },
 ]
 
