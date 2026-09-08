@@ -22,7 +22,15 @@ Examples of values that belong here:
 Physical configuration such as GPIO pins, sensor mounting angles, and
 PCA9685 motor channels belongs in hardware.py instead.
 """
+# =========================================================
+# Main Loop / Debug Settings
+# =========================================================
 
+# Delay between main-loop iterations.
+MAIN_LOOP_SLEEP_S = 0.05
+
+# How often system status is printed to the terminal.
+DEBUG_PRINT_INTERVAL_S = 0.5
 
 # =====================================================================
 # HC-SR04 SETTINGS
