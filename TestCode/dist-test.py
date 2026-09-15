@@ -11,20 +11,22 @@ class AsyncHCSR04:
         self.trig_pin = trig_pin
         self.echo_pin = echo_pin
         
-        # Open gpiochip4 (standard for Pi 4 on Debian) with fallback
         try:
             self.chip = lgpio.gpiochip_open(4)
         except lgpio.error:
             self.chip = lgpio.gpiochip_open(0)
 
+        # Claim Output for TRIG
         lgpio.gpio_claim_output(self.chip, self.trig_pin, 0)
+        
+        # Claim Input for ECHO
         lgpio.gpio_claim_input(self.chip, self.echo_pin)
 
         self.start_ns = None
         self.pulse_duration_s = None
 
-        # Register non-blocking hardware alert callback on ECHO pin transitions
-        self.cb = lgpio.gpio_claim_alert(
+        # lgpio.callback handles both claim and registration cleanly
+        self.cb = lgpio.callback(
             self.chip, 
             self.echo_pin, 
             lgpio.BOTH_EDGES, 
@@ -32,14 +34,13 @@ class AsyncHCSR04:
         )
 
     def _edge_callback(self, chip, gpio, level, timestamp_ns):
-        """Executes automatically in the background on hardware state change."""
+        """Callback signature: (chip, gpio, level, timestamp_ns)"""
         if level == 1:
             self.start_ns = timestamp_ns
         elif level == 0 and self.start_ns is not None:
             self.pulse_duration_s = (timestamp_ns - self.start_ns) / 1e9
 
     def trigger_ping(self):
-        """Fires a non-blocking 10us trigger pulse and returns immediately."""
         self.pulse_duration_s = None
         self.start_ns = None
         
@@ -48,20 +49,19 @@ class AsyncHCSR04:
         lgpio.gpio_write(self.chip, self.trig_pin, 0)
 
     def get_distance(self, timeout_s=0.03):
-        """Asynchronously triggers and yields distance in meters (or None on timeout)."""
         self.trigger_ping()
         
-        # Non-blocking wait loop with sleep (allows CPU to handle other tasks)
         start = time.monotonic()
         while self.pulse_duration_s is None:
             if time.monotonic() - start > timeout_s:
                 return None
-            time.sleep(0.001)  # Yields CPU back to OS / mapping threads
+            time.sleep(0.001)
 
-        distance = (self.pulse_duration_s * SPEED_OF_SOUND_M_S) / 2.0
-        return distance
+        return (self.pulse_duration_s * SPEED_OF_SOUND_M_S) / 2.0
 
     def cleanup(self):
+        if hasattr(self, 'cb') and self.cb:
+            self.cb.cancel()
         lgpio.gpio_write(self.chip, self.trig_pin, 0)
         lgpio.gpio_free(self.chip, self.trig_pin)
         lgpio.gpio_free(self.chip, self.echo_pin)
