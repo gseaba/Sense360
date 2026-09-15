@@ -24,7 +24,7 @@ class AsyncHCSR04:
         self.pulse_duration_s = None
 
         # Register non-blocking hardware alert callback on ECHO pin transitions
-        self.cb = lgpio.gpio_claim_alert_ns(
+        self.cb = lgpio.gpio_claim_alert(
             self.chip, 
             self.echo_pin, 
             lgpio.BOTH_EDGES, 
