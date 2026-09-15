@@ -82,7 +82,7 @@ if __name__ == "__main__":
     try:
         while True:
             # Pause 1 second before taking reading
-            time.sleep(1.0)
+            time.sleep(3.0)
 
             readings = []
             for _ in range(3):
@@ -94,36 +94,6 @@ if __name__ == "__main__":
             if readings:
                 median_dist = statistics.median(readings)
                 print(f"Distance: {median_dist:6.2f} cm  (Raw: {[round(r, 1) for r in readings]})")
-            else:
-                print("Reading Timed Out / Out of Range")
-
-    except KeyboardInterrupt:
-        print("\nStopping test...")
-    finally:
-        sensor.cleanup()
-
-
-# =========================================================
-# Testing Script (Accuracy & 3-Ping Median)
-# =========================================================
-if __name__ == "__main__":
-    sensor = AsyncHCSR04(trig_pin=TRIG_PIN, echo_pin=ECHO_PIN)
-    print("Testing Asynchronous lgpio Driver... Press Ctrl+C to stop.\n")
-
-    try:
-        while True:
-            time.sleep(5.0)
-            # Gather 3 rapid pings for median filtering
-            readings = []
-            for _ in range(3):
-                d = sensor.get_distance()
-                if d is not None and 0.02 <= d <= 4.0:
-                    readings.append(d * 100)  # Convert to cm
-                time.sleep(0.01)  # Brief 10ms acoustic ring-down pause
-
-            if readings:
-                median_dist = statistics.median(readings)
-                print(f"Distance: {median_dist:6.2f} cm  (Raw Pings: {[round(r, 1) for r in readings]})")
             else:
                 print("Reading Timed Out / Out of Range")
 
