@@ -1,56 +1,75 @@
+from collections import deque
+import statistics
 import time
 
 from hcsr04 import HCSR04
 
 
-front = HCSR04(
-    trig_pin=17,
-    echo_pin=27,
-)
+front = HCSR04(trig_pin=17, echo_pin=27)
+right = HCSR04(trig_pin=22, echo_pin=23)
+left = HCSR04(trig_pin=24, echo_pin=25)
 
-right = HCSR04(
-    trig_pin=22,
-    echo_pin=23,
-)
 
-left = HCSR04(
-    trig_pin=24,
-    echo_pin=25,
-)
+# Keep the three most recent valid measurements.
+front_buffer = deque(maxlen=3)
+right_buffer = deque(maxlen=3)
+left_buffer = deque(maxlen=3)
 
 
 try:
     while True:
 
-        # Start measurements.
-        front.trigger()
-        right.trigger()
-        left.trigger()
+        # ---------------------------------------------------------
+        # Start measurements
+        # ---------------------------------------------------------
 
-        # Do other application work here.
-        # --------------------------------------------------
-        # navigation()
-        # process_buttons()
-        # update_display()
-        # process_network()
-        # etc.
-        # --------------------------------------------------
+        front.trigger()
 
         time.sleep(0.01)
 
-        # Retrieve completed measurements.
+        right.trigger()
+
+        time.sleep(0.01)
+
+        left.trigger()
+
+        # ---------------------------------------------------------
+        # Do other application work here
+        # ---------------------------------------------------------
+
+        # ...
+
+        # ---------------------------------------------------------
+        # Collect completed measurements
+        # ---------------------------------------------------------
+
         front_distance = front.get_distance()
         right_distance = right.get_distance()
         left_distance = left.get_distance()
 
         if front_distance is not None:
-            print(f"Front: {front_distance:.2f} m")
+            front_buffer.append(front_distance)
 
         if right_distance is not None:
-            print(f"Right: {right_distance:.2f} m")
+            right_buffer.append(right_distance)
 
         if left_distance is not None:
-            print(f"Left: {left_distance:.2f} m")
+            left_buffer.append(left_distance)
+
+        # ---------------------------------------------------------
+        # Later, when you actually need the filtered distances:
+        # ---------------------------------------------------------
+
+        if front_buffer:
+            front_median = statistics.median(front_buffer)
+
+        if right_buffer:
+            right_median = statistics.median(right_buffer)
+
+        if left_buffer:
+            left_median = statistics.median(left_buffer)
+
+        # Continue doing other work...
 
 finally:
     front.cleanup()
