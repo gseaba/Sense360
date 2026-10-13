@@ -32,7 +32,7 @@ def main():
                 # Clear the interrupt to ready the sensor for the next reading
                 sensor.clear_interrupt()
                 
-            time.sleep(0.05)  # Small delay to prevent hammering the CPU
+            time.sleep(2)  # Small delay to prevent hammering the CPU
 
     except KeyboardInterrupt:
         print("\nStopping sensor...")
