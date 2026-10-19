@@ -57,8 +57,9 @@ for cfg in SENSORS_CONFIG:
 device_dict = {dev["name"]: dev for dev in devices}
 
 def calculate_vibration_intensity(distance_m):
-    """Maps distance in meters to a PWM value between 0.0 and 1.0."""
-    if distance_m >= MAX_DISTANCE_M:
+    """Maps distance in meters to PWM value (0.0 to 1.0)."""
+    # Treat invalid/out-of-bounds readings as off
+    if distance_m <= 0 or distance_m >= MAX_DISTANCE_M:
         return 0.0
     if distance_m <= MIN_DISTANCE_M:
         return 1.0
@@ -85,7 +86,11 @@ try:
 
             # 3. Read distance (returns meters or None)
             dist_m = sensor.get_distance()
-            if dist_m is not None:
+
+            # If measurement failed/out-of-range, append -1 as a placeholder
+            if dist_m is None:
+                buffer.append(-1)
+            else:
                 buffer.append(dist_m)
 
             # 4. Filter reading and set motor intensity
