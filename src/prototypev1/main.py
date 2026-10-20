@@ -13,14 +13,14 @@ MIN_DISTANCE_M = 0.1  # Distance for max vibration intensity (0.1 m / 10 cm)
 
 # Define each direction with unique GPIO pins
 SENSORS_CONFIG = [
-    {"name": "front",       "trig": 17, "echo": 27, "motor_pin": 18},
-    {"name": "front_right", "trig": 22, "echo": 23, "motor_pin": 24},
-    {"name": "right",       "trig": 24, "echo": 25, "motor_pin": 12},
-    {"name": "back_right",  "trig": 5,  "echo": 6,  "motor_pin": 13},
-    {"name": "back",        "trig": 13, "echo": 19, "motor_pin": 19},
-    {"name": "back_left",   "trig": 26, "echo": 21, "motor_pin": 20},
-    {"name": "left",        "trig": 20, "echo": 16, "motor_pin": 21},
-    {"name": "front_left",  "trig": 16, "echo": 12, "motor_pin": 6},
+    {"name": "front",       "trig": 15, "echo": 10, "motor_channel": 7},
+    {"name": "front_right", "trig": 18, "echo": 17, "motor_channel": 6},
+    {"name": "right",       "trig": 23, "echo": 27, "motor_channel": 5},
+    {"name": "back_right",  "trig": 24,  "echo": 22,  "motor_channel": 4},
+    {"name": "back",        "trig": 25, "echo": 9, "motor_channel": 3},
+    {"name": "back_left",   "trig": 8, "echo": 11, "motor_channel": 2},
+    {"name": "left",        "trig": 7, "echo": 5, "motor_channel": 1},
+    {"name": "front_left",  "trig": 12, "echo": 6, "motor_channel": 0},
 ]
 
 # Stagger sensor triggering order to minimize ultrasonic crosstalk
@@ -50,7 +50,7 @@ for cfg in SENSORS_CONFIG:
             echo_pin=cfg["echo"], 
             chip_handle=chip_handle
         ),
-        "motor": PWMOutputDevice(cfg["motor_pin"]),
+        "motor": PWMOutputDevice(cfg["motor_channel"]),
         "buffer": deque(maxlen=3)
     })
 
