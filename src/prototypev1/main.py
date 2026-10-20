@@ -45,7 +45,7 @@ except lgpio.error:
 
 i2c = busio.I2C(board.SCL, board.SDA)
 pca = PCA9685(i2c)
-pca.frequency = 1000
+pca.frequency = 200
 
 devices = []
 
