@@ -2,7 +2,9 @@ from collections import deque
 import statistics
 import time
 import lgpio
-from gpiozero import PWMOutputDevice
+from adafruit_pca9685 import PCA9685
+import board
+import busio
 from hcsr04 import HCSR04
 
 # ---------------------------------------------------------
@@ -40,6 +42,11 @@ try:
 except lgpio.error:
     chip_handle = lgpio.gpiochip_open(0)
 
+
+i2c = busio.I2C(board.SCL, board.SDA)
+pca = PCA9685(i2c)
+pca.frequency = 1000
+
 devices = []
 
 for cfg in SENSORS_CONFIG:
@@ -50,7 +57,7 @@ for cfg in SENSORS_CONFIG:
             echo_pin=cfg["echo"], 
             chip_handle=chip_handle
         ),
-        "motor": PWMOutputDevice(cfg["motor_channel"]),
+        "motor": pca.channels[cfg["motor_channel"]],
         "buffer": deque(maxlen=3)
     })
 
@@ -96,16 +103,19 @@ try:
             # 4. Filter reading and set motor intensity
             if buffer:
                 filtered_dist = statistics.median(buffer)
-                motor.value = calculate_vibration_intensity(filtered_dist)
+                intensity = calculate_vibration_intensity(filtered_dist)
+                motor.duty_cycle = int(intensity * 65535)
             else:
-                motor.value = 0.0
+                motor.duty_cycle = 0
 
 finally:
     # Safely turn off motors and release sensor resources
     for dev in devices:
-        dev["motor"].value = 0
-        dev["motor"].close()
+        dev["motor"].duty_cycle = 0
         dev["sensor"].cleanup()
+        dev["sensor"].cleanup()
+
+    pca.deinit()
         
     try:
         lgpio.gpiochip_close(chip_handle)
