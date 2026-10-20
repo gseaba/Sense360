@@ -1,0 +1,257 @@
+# Sense360 Hardware Pinouts
+
+## Overview
+
+The Sense360 wearable belt uses:
+
+- Raspberry Pi 4 Model B
+- 8 HC-SR04 ultrasonic distance sensors
+- 8 coin vibration motors
+- PCA9685 PWM controller
+- BNO085 IMU
+- 2 F5305S 4-channel MOSFET modules
+
+All eight ultrasonic sensors and vibration motors are positioned at **45° intervals** around the belt.
+
+Each vibration motor is located alongside its corresponding ultrasonic sensor.
+
+## 1. Sensor and Motor Pinouts
+
+All Raspberry Pi GPIO numbers use **BCM numbering**.
+
+Physical pin numbers refer to the Raspberry Pi's 40-pin header.
+
+| Sensor | Angle | TRIG GPIO | TRIG Physical Pin | ECHO GPIO | ECHO Physical Pin | PCA9685 Motor Channel |
+|---|---:|---|---:|---|---:|---:|
+| 1 | 0° | GPIO15 | 10 | GPIO10 | 19 | 7 |
+| 2 | 45° | GPIO18 | 12 | GPIO17 | 11 | 6 |
+| 3 | 90° | GPIO23 | 16 | GPIO27 | 13 | 5 |
+| 4 | 135° | GPIO24 | 18 | GPIO22 | 15 | 4 |
+| 5 | 180° | GPIO25 | 22 | GPIO9 | 21 | 3 |
+| 6 | 225° | GPIO8 | 24 | GPIO11 | 23 | 2 |
+| 7 | 270° | GPIO7 | 26 | GPIO5 | 29 | 1 |
+| 8 | 315° | GPIO12 | 32 | GPIO6 | 31 | 0 |
+
+### Angle Convention
+
+Angles are measured relative to the wearer:
+
+- **0°:** Front
+- **45°:** Front-right
+- **90°:** Right
+- **135°:** Rear-right
+- **180°:** Rear
+- **225°:** Rear-left
+- **270°:** Left
+- **315°:** Front-left
+
+Sensor 1 faces directly forward.
+
+Angles increase clockwise when viewed from above.
+
+## 2. HC-SR04 Ultrasonic Sensor Wiring
+
+Each ultrasonic sensor requires four connections:
+
+| HC-SR04 Pin | Connection |
+|---|---|
+| VCC | 5 V power bus |
+| GND | Common ground |
+| TRIG | Assigned Raspberry Pi GPIO output |
+| ECHO | Assigned Raspberry Pi GPIO input through voltage divider |
+
+### ECHO Voltage Divider
+
+The HC-SR04 operates at 5 V, but Raspberry Pi GPIO inputs operate at 3.3 V.
+
+Every ECHO signal must pass through its own voltage divider.
+
+Recommended resistor arrangement:
+
+```text
+HC-SR04 ECHO (5V)
+        |
+       10kΩ
+        |
+        +-------- Raspberry Pi ECHO GPIO
+        |
+       18kΩ
+        |
+       GND
+```
+
+The divider produces approximately:
+
+```text
+Vout = 5V × 18 / (10 + 18)
+Vout ≈ 3.21V
+```
+
+This provides a suitable HIGH signal for the Raspberry Pi.
+
+**Important:**
+
+- All eight ECHO lines require separate voltage dividers.
+- TRIG lines connect directly to the Raspberry Pi GPIO outputs.
+- ECHO lines must not be connected together.
+- All sensors can share the same 5 V and ground distribution buses.
+
+## 3. PCA9685 PWM Controller
+
+The PCA9685 communicates with the Raspberry Pi over hardware I²C bus 1.
+
+| PCA9685 Pin | Raspberry Pi Connection | Physical Pin |
+|---|---|---:|
+| VCC | 3.3 V | 1 |
+| GND | GND | 6 |
+| SDA | GPIO2 | 3 |
+| SCL | GPIO3 | 5 |
+
+**I²C address:** `0x40`
+
+**PWM frequency:** 200 Hz
+
+The PCA9685 controls vibration intensity through the F5305S MOSFET modules.
+
+It does not directly power the motors.
+
+### Vibration Motor Channel Assignments
+
+| Motor | Angle | PCA9685 Channel | Corresponding Sensor |
+|---|---:|---:|---|
+| Motor 1 | 0° | 7 | Sensor 1 |
+| Motor 2 | 45° | 6 | Sensor 2 |
+| Motor 3 | 90° | 5 | Sensor 3 |
+| Motor 4 | 135° | 4 | Sensor 4 |
+| Motor 5 | 180° | 3 | Sensor 5 |
+| Motor 6 | 225° | 2 | Sensor 6 |
+| Motor 7 | 270° | 1 | Sensor 7 |
+| Motor 8 | 315° | 0 | Sensor 8 |
+
+The physical PCA9685 outputs used are channels **0 through 7**.
+
+Channel 0 is located alongside Sensor 8, and channel 7 is located alongside Sensor 1.
+
+## 4. F5305S MOSFET Motor Driver Wiring
+
+Two 4-channel F5305S modules provide independent switching for all eight vibration motors.
+
+The modules use low-side switching, as verified by continuity measurements.
+
+### Motor Power Connections
+
+- Motor supply positive connects to the common motor-positive bus.
+- Both MOSFET modules receive the motor supply at `DC+` and `DC-`.
+- Each motor positive terminal connects to the common motor-positive bus.
+- Each motor negative terminal connects to its assigned `OUT-` terminal.
+- The `OUT+` terminals can remain unused because they are connected internally to `DC+`.
+
+```text
+Motor Supply +
+       |
+       +-------- F5305S Board 1 DC+
+       |
+       +-------- F5305S Board 2 DC+
+       |
+       +-------- Common Motor + Bus
+                      |
+                      +---- Motor 1+
+                      +---- Motor 2+
+                      +---- Motor 3+
+                      +---- ...
+                      +---- Motor 8+
+
+Motor 1- ---------- F5305S OUT1-
+Motor 2- ---------- F5305S OUT2-
+...
+Motor 8- ---------- F5305S OUT8-
+
+Motor Supply - ---- F5305S Board 1 DC-
+               |
+               +------ F5305S Board 2 DC-
+```
+
+**Important:** Never connect the individual `OUT-` terminals together, as this would interfere with independent motor control.
+
+The F5305S control inputs are driven by their assigned PCA9685 PWM channels.
+
+## 5. BNO085 IMU Connections
+
+The BNO085 uses a separate software I²C bus to avoid communication problems encountered with the Raspberry Pi's hardware I²C bus.
+
+| BNO085 Pin | Raspberry Pi Connection | Physical Pin |
+|---|---|---:|
+| VCC | 3.3 V | 1 |
+| GND | GND | 6 |
+| SDA | GPIO20 | 38 |
+| SCL | GPIO21 | 40 |
+
+**I²C bus:** 8
+
+**I²C address:** `0x4B`
+
+### Raspberry Pi Configuration
+
+The following overlay is configured in `/boot/firmware/config.txt`:
+
+```ini
+dtoverlay=i2c-gpio,bus=8,i2c_gpio_sda=20,i2c_gpio_scl=21
+```
+
+## 6. Raspberry Pi Power Connections
+
+The Raspberry Pi 4 requires a regulated 5 V power supply with sufficient current capacity.
+
+If powering through the GPIO header:
+
+| Supply Connection | Raspberry Pi Physical Pin |
+|---|---:|
+| Regulated 5 V (+) | 2 |
+| Ground (-) | 6, 9, 14, 20, 25, 30, 34, or 39 |
+
+Physical pin 4 is also a 5 V connection.
+
+**Important:** Powering through the GPIO header bypasses the normal USB-C power-input protection path. Verify supply voltage, polarity, and current capability before connecting.
+
+## 7. Python Hardware Configuration
+
+The following values correspond to the finalized wiring.
+
+```python
+ULTRASONIC_SENSORS = [
+    {"sensor_id": "sensor_1", "trig_pin": 15, "echo_pin": 10, "relative_angle_deg": 0.0},
+    {"sensor_id": "sensor_2", "trig_pin": 18, "echo_pin": 17, "relative_angle_deg": 45.0},
+    {"sensor_id": "sensor_3", "trig_pin": 23, "echo_pin": 27, "relative_angle_deg": 90.0},
+    {"sensor_id": "sensor_4", "trig_pin": 24, "echo_pin": 22, "relative_angle_deg": 135.0},
+    {"sensor_id": "sensor_5", "trig_pin": 25, "echo_pin": 9, "relative_angle_deg": 180.0},
+    {"sensor_id": "sensor_6", "trig_pin": 8, "echo_pin": 11, "relative_angle_deg": 225.0},
+    {"sensor_id": "sensor_7", "trig_pin": 7, "echo_pin": 5, "relative_angle_deg": 270.0},
+    {"sensor_id": "sensor_8", "trig_pin": 12, "echo_pin": 6, "relative_angle_deg": 315.0},
+]
+
+HAPTIC_MOTORS = [
+    {"motor_id": "motor_1", "pwm_channel": 7, "relative_angle_deg": 0.0},
+    {"motor_id": "motor_2", "pwm_channel": 6, "relative_angle_deg": 45.0},
+    {"motor_id": "motor_3", "pwm_channel": 5, "relative_angle_deg": 90.0},
+    {"motor_id": "motor_4", "pwm_channel": 4, "relative_angle_deg": 135.0},
+    {"motor_id": "motor_5", "pwm_channel": 3, "relative_angle_deg": 180.0},
+    {"motor_id": "motor_6", "pwm_channel": 2, "relative_angle_deg": 225.0},
+    {"motor_id": "motor_7", "pwm_channel": 1, "relative_angle_deg": 270.0},
+    {"motor_id": "motor_8", "pwm_channel": 0, "relative_angle_deg": 315.0},
+]
+```
+
+## 8. Important Hardware Notes
+
+- All HC-SR04 sensors operate from the regulated 5 V rail.
+- Each HC-SR04 ECHO line requires a voltage divider.
+- The Raspberry Pi's GPIO inputs are not 5 V tolerant.
+- The PCA9685 and BNO085 use 3.3 V logic power.
+- The BNO085 uses software I²C bus 8.
+- The PCA9685 uses hardware I²C bus 1.
+- Ultrasonic sensors should be triggered sequentially to minimize acoustic crosstalk.
+- GPIO15 (physical pin 10) is assigned to Sensor 1 TRIG and must not conflict with UART usage.
+- GPIO7–GPIO11 overlap with SPI functions and must not conflict with an enabled SPI interface.
+- All eight vibration motors are controlled independently through PCA9685 channels 0–7.
+- The sensor and motor angular positions must remain aligned in software.
+- The first four ECHO GPIO assignments account for the soldering changes made during belt construction.
