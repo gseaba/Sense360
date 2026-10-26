@@ -5,7 +5,7 @@ import lgpio
 from adafruit_pca9685 import PCA9685
 import board
 import busio
-from hcsr04 import HCSR04
+from HCSR04 import HCSR04
 
 # ---------------------------------------------------------
 # Configuration (Values in METERS)
