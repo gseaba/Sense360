@@ -1,241 +1,235 @@
+
 """
-hardware.py
+Sense360 Hardware Configuration
 
-Describes the physical hardware configuration of the current Sense360
-prototype.
+Defines the physical wiring and component placement for the
+8-sensor, 8-motor Sense360 wearable belt.
 
-This file contains information about WHAT hardware is installed and
-HOW that hardware is physically connected.
+All Raspberry Pi GPIO numbers use BCM numbering.
 
-Examples:
-    - Raspberry Pi GPIO assignments
-    - Ultrasonic sensor mounting directions
-    - I2C bus assignments
-    - I2C device addresses
-    - PCA9685 motor channels
-    - BNO085 connection information
+Physical arrangement:
+    0 degrees   = Front
+    90 degrees  = Right
+    180 degrees = Rear
+    270 degrees = Left
 
-Behavioral and algorithm-tuning values do NOT belong here.
-Those values belong in:
-
-    config/settings.py
-
-Keeping hardware configuration separate from the device classes prevents
-GPIO pins, I2C buses, addresses, and PWM channels from being hard-coded
-throughout the Sense360 software.
-
-Current prototype hardware:
-    - Raspberry Pi 4 Model B
-    - 1 HC-SR04 ultrasonic sensor
-    - 1 BNO085 IMU
-    - 1 PCA9685 PWM controller
-    - 1 vibration motor
-    - MOSFET motor driver circuit
-
-The configuration can later be expanded to additional sensors and motors
-without requiring major changes to the classes that operate them.
+All sensors and motors are spaced 45 degrees apart.
 """
 
+# =========================================================
+# RASPBERRY PI GPIO CONFIGURATION
+# =========================================================
 
-# =====================================================================
-# RASPBERRY PI GPIO
-# =====================================================================
-
-# GPIO chip used by the lgpio library.
-#
-# Raspberry Pi GPIO numbering throughout this configuration uses
-# BCM GPIO numbers unless otherwise stated.
+# Raspberry Pi 4 GPIO chip used by lgpio
 GPIO_CHIP = 0
 
 
-# =====================================================================
-# I2C BUSES
-# =====================================================================
+# =========================================================
+# I2C BUS CONFIGURATION
+# =========================================================
 
-# The PCA9685 uses the Raspberry Pi's standard hardware I2C bus.
-#
-# Bus 1 wiring:
-#     SDA -> BCM GPIO2
-#            Physical Pin 3
-#
-#     SCL -> BCM GPIO3
-#            Physical Pin 5
+# PCA9685: Hardware I2C bus 1
+# SDA = GPIO2  (Physical pin 3)
+# SCL = GPIO3  (Physical pin 5)
+
 PCA9685_I2C_BUS = 1
 
+# BNO085: Software I2C bus 8
+# SDA = GPIO20 (Physical pin 38)
+# SCL = GPIO21 (Physical pin 40)
 
-# The BNO085 uses a separate software-created I2C bus.
-#
-# Bus 8 wiring:
-#     SDA -> BCM GPIO20
-#            Physical Pin 38
-#
-#     SCL -> BCM GPIO21
-#            Physical Pin 40
 BNO085_I2C_BUS = 8
 
 
-# =====================================================================
-# ULTRASONIC SENSORS
-# =====================================================================
+# =========================================================
+# HC-SR04 ULTRASONIC SENSORS
+# =========================================================
 
-# Each dictionary describes one installed ultrasonic sensor.
-#
-# GPIO values use BCM numbering.
-#
-# Sensor-angle convention:
-#
-#     0 degrees   = front
-#     90 degrees  = right
-#     180 degrees = rear
-#     270 degrees = left
-#
-# The angle describes the physical direction the sensor faces relative
-# to the Sense360 belt.
-#
-# Current prototype Sensor 1:
-#
-#     TRIG:
-#         BCM GPIO17
-#         Physical Pin 11
-#
-#     ECHO:
-#         BCM GPIO27
-#         Physical Pin 13
+# Each sensor uses an independent TRIG and ECHO GPIO.
 #
 # IMPORTANT:
-#     The HC-SR04 ECHO signal is approximately 5 V.
+# Every ECHO line passes through its own voltage divider
+# before reaching the Raspberry Pi.
 #
-#     The Raspberry Pi GPIO input must not receive this voltage directly.
-#     ECHO must pass through the voltage-divider circuit before reaching
-#     GPIO27.
+# GPIO numbering is BCM, not physical pin numbering.
+#
+# Sensor | TRIG GPIO | ECHO GPIO | Angle
+# -------|-----------|-----------|------
+#    1   |    15     |    10     |   0
+#    2   |    18     |    17     |  45
+#    3   |    23     |    27     |  90
+#    4   |    24     |    22     | 135
+#    5   |    25     |     9     | 180
+#    6   |     8     |    11     | 225
+#    7   |     7     |     5     | 270
+#    8   |    12     |     6     | 315
 
 ULTRASONIC_SENSORS = [
     {
         "sensor_id": "sensor_1",
-        "trig_pin": 17,
-        "echo_pin": 27,
+        "trig_pin": 15,
+        "echo_pin": 10,
         "relative_angle_deg": 0.0,
+    },
+    {
+        "sensor_id": "sensor_2",
+        "trig_pin": 18,
+        "echo_pin": 17,
+        "relative_angle_deg": 45.0,
+    },
+    {
+        "sensor_id": "sensor_3",
+        "trig_pin": 23,
+        "echo_pin": 27,
+        "relative_angle_deg": 90.0,
+    },
+    {
+        "sensor_id": "sensor_4",
+        "trig_pin": 24,
+        "echo_pin": 22,
+        "relative_angle_deg": 135.0,
+    },
+    {
+        "sensor_id": "sensor_5",
+        "trig_pin": 25,
+        "echo_pin": 9,
+        "relative_angle_deg": 180.0,
+    },
+    {
+        "sensor_id": "sensor_6",
+        "trig_pin": 8,
+        "echo_pin": 11,
+        "relative_angle_deg": 225.0,
+    },
+    {
+        "sensor_id": "sensor_7",
+        "trig_pin": 7,
+        "echo_pin": 5,
+        "relative_angle_deg": 270.0,
+    },
+    {
+        "sensor_id": "sensor_8",
+        "trig_pin": 12,
+        "echo_pin": 6,
+        "relative_angle_deg": 315.0,
     },
 ]
 
 
-# =====================================================================
+# =========================================================
 # BNO085 IMU
-# =====================================================================
+# =========================================================
 
-# The BNO085 provides orientation and motion information to Sense360.
+# Software I2C bus 8
 #
-# Unlike the PCA9685, the BNO085 is connected to the separate software
-# I2C bus.
-#
-# Current connection:
-#
-#     I2C Bus: 8
-#
-#     SDA:
-#         BCM GPIO20
-#         Physical Pin 38
-#
-#     SCL:
-#         BCM GPIO21
-#         Physical Pin 40
-#
-#     I2C Address:
-#         0x4B
+# VCC = Pi 3.3V
+# GND = Pi GND
+# SDA = GPIO20 (Physical pin 38)
+# SCL = GPIO21 (Physical pin 40)
 
 BNO085 = {
     "enabled": True,
-
     "i2c_bus": BNO085_I2C_BUS,
     "i2c_address": 0x4B,
-
     "sda_pin": 20,
     "scl_pin": 21,
 }
 
 
-# =====================================================================
+# =========================================================
 # PCA9685 PWM CONTROLLER
-# =====================================================================
+# =========================================================
 
-# The PCA9685 generates PWM signals used to control the Sense360
-# vibration motors.
+# Hardware I2C bus 1
 #
-# It is connected to the Raspberry Pi's normal hardware I2C bus.
+# VCC = Pi 3.3V
+# GND = Pi GND
+# SDA = GPIO2 (Physical pin 3)
+# SCL = GPIO3 (Physical pin 5)
 #
-# Current connection:
-#
-#     I2C Bus: 1
-#
-#     SDA:
-#         BCM GPIO2
-#         Physical Pin 3
-#
-#     SCL:
-#         BCM GPIO3
-#         Physical Pin 5
-#
-#     I2C Address:
-#         0x40
-#
-# The PCA9685 does NOT directly power the vibration motors.
-# Its PWM output drives the MOSFET motor-control circuit.
+# PWM frequency is configured in config/settings.py
+# and should be 200 Hz.
 
 PCA9685 = {
     "enabled": True,
-
     "i2c_bus": PCA9685_I2C_BUS,
     "i2c_address": 0x40,
-
     "sda_pin": 2,
     "scl_pin": 3,
 }
 
 
-# =====================================================================
-# HAPTIC MOTORS
-# =====================================================================
+# =========================================================
+# HAPTIC VIBRATION MOTORS
+# =========================================================
 
-# Each dictionary describes one installed vibration motor.
+# Eight vibration motors connected through two
+# F5305S 4-channel MOSFET driver boards.
 #
-# Motor-angle convention matches the sensor-angle convention:
+# Each motor is located next to its corresponding sensor.
 #
-#     0 degrees   = front
-#     90 degrees  = right
-#     180 degrees = rear
-#     270 degrees = left
+# PCA9685 channel order is reversed relative to the
+# ultrasonic sensor numbering.
 #
-# "pwm_channel" specifies the PCA9685 output channel connected to that
-# motor's MOSFET driver circuit.
-#
-# Current prototype:
-#
-#     Motor 1
-#         PCA9685 Channel 0
-#         Mounted at the front position
+# Motor | PCA Channel | Angle | Sensor
+# ------|-------------|-------|-------
+#   1   |      7      |   0   |   1
+#   2   |      6      |  45   |   2
+#   3   |      5      |  90   |   3
+#   4   |      4      | 135   |   4
+#   5   |      3      | 180   |   5
+#   6   |      2      | 225   |   6
+#   7   |      1      | 270   |   7
+#   8   |      0      | 315   |   8
 
 HAPTIC_MOTORS = [
     {
         "motor_id": "motor_1",
-        "pwm_channel": 0,
+        "pwm_channel": 7,
         "relative_angle_deg": 0.0,
+    },
+    {
+        "motor_id": "motor_2",
+        "pwm_channel": 6,
+        "relative_angle_deg": 45.0,
+    },
+    {
+        "motor_id": "motor_3",
+        "pwm_channel": 5,
+        "relative_angle_deg": 90.0,
+    },
+    {
+        "motor_id": "motor_4",
+        "pwm_channel": 4,
+        "relative_angle_deg": 135.0,
+    },
+    {
+        "motor_id": "motor_5",
+        "pwm_channel": 3,
+        "relative_angle_deg": 180.0,
+    },
+    {
+        "motor_id": "motor_6",
+        "pwm_channel": 2,
+        "relative_angle_deg": 225.0,
+    },
+    {
+        "motor_id": "motor_7",
+        "pwm_channel": 1,
+        "relative_angle_deg": 270.0,
+    },
+    {
+        "motor_id": "motor_8",
+        "pwm_channel": 0,
+        "relative_angle_deg": 315.0,
     },
 ]
 
 
-# =====================================================================
+# =========================================================
 # HARDWARE COUNTS
-# =====================================================================
+# =========================================================
 
-# These values are calculated automatically from the hardware lists.
-#
-# Do not manually update these when additional sensors or motors are
-# installed.
+NUMBER_OF_ULTRASONIC_SENSORS = len(ULTRASONIC_SENSORS)
 
-NUMBER_OF_ULTRASONIC_SENSORS = len(
-    ULTRASONIC_SENSORS
-)
-
-NUMBER_OF_HAPTIC_MOTORS = len(
-    HAPTIC_MOTORS
-)
+NUMBER_OF_HAPTIC_MOTORS = len(HAPTIC_MOTORS)
