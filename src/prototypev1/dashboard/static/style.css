@@ -1,0 +1,94 @@
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: #111827;
+    color: #f9fafb;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+h1 {
+    font-size: 24px;
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+#connection {
+    color: #facc15;
+}
+
+main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.map-container {
+    flex: 1 1 500px;
+    max-width: 650px;
+}
+
+.readings {
+    flex: 1 1 250px;
+}
+
+svg {
+    width: 100%;
+    max-width: 600px;
+    background: #1f2937;
+    border-radius: 12px;
+}
+
+.grid-ring {
+    fill: none;
+    stroke: #4b5563;
+    stroke-width: 1;
+}
+
+.grid-line {
+    stroke: #4b5563;
+    stroke-width: 1;
+}
+
+.grid-label {
+    fill: #9ca3af;
+    font-size: 12px;
+}
+
+.wearer {
+    fill: #60a5fa;
+    stroke: white;
+    stroke-width: 2;
+}
+
+.wearer-label {
+    fill: white;
+    font-size: 12px;
+}
+
+.object {
+    fill: #ef4444;
+    stroke: white;
+    stroke-width: 2;
+}
+
+.reading {
+    background: #1f2937;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}

@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mobility Belt Dashboard</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Mobility Belt Dashboard</h1>
+        <div id="connection">Connecting...</div>
+    </header>
+
+    <main>
+
+        <section class="map-container">
+
+            <h2>Spatial Detection Map</h2>
+
+            <svg id="map" viewBox="0 0 600 600">
+
+                <g id="grid"></g>
+
+                <g id="objects"></g>
+
+                <circle
+                    cx="300"
+                    cy="300"
+                    r="12"
+                    class="wearer"
+                />
+
+                <text
+                    x="300"
+                    y="280"
+                    text-anchor="middle"
+                    class="wearer-label"
+                >
+                    YOU
+                </text>
+
+            </svg>
+
+        </section>
+
+        <section class="readings">
+
+            <h2>Detected Objects</h2>
+
+            <div id="object-list">
+                Waiting for sensor data...
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="/static/dashboard.js"></script>
+
+</body>
+</html>
