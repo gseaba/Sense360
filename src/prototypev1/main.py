@@ -2,8 +2,10 @@ from collections import deque
 import statistics
 import time
 import lgpio
-from gpiozero import PWMOutputDevice
-from hcsr04 import HCSR04
+from adafruit_pca9685 import PCA9685
+import board
+import busio
+from HCSR04 import HCSR04
 
 # ---------------------------------------------------------
 # Configuration (Values in METERS)
@@ -13,14 +15,14 @@ MIN_DISTANCE_M = 0.1  # Distance for max vibration intensity (0.1 m / 10 cm)
 
 # Define each direction with unique GPIO pins
 SENSORS_CONFIG = [
-    {"name": "front",       "trig": 17, "echo": 27, "motor_pin": 18},
-    {"name": "front_right", "trig": 22, "echo": 23, "motor_pin": 24},
-    {"name": "right",       "trig": 24, "echo": 25, "motor_pin": 12},
-    {"name": "back_right",  "trig": 5,  "echo": 6,  "motor_pin": 13},
-    {"name": "back",        "trig": 13, "echo": 19, "motor_pin": 19},
-    {"name": "back_left",   "trig": 26, "echo": 21, "motor_pin": 20},
-    {"name": "left",        "trig": 20, "echo": 16, "motor_pin": 21},
-    {"name": "front_left",  "trig": 16, "echo": 12, "motor_pin": 6},
+    {"name": "front",       "trig": 15, "echo": 10, "motor_channel": 7},
+    {"name": "front_right", "trig": 18, "echo": 17, "motor_channel": 6},
+    {"name": "right",       "trig": 23, "echo": 27, "motor_channel": 5},
+    {"name": "back_right",  "trig": 24,  "echo": 22,  "motor_channel": 4},
+    {"name": "back",        "trig": 25, "echo": 9, "motor_channel": 3},
+    {"name": "back_left",   "trig": 8, "echo": 11, "motor_channel": 2},
+    {"name": "left",        "trig": 7, "echo": 5, "motor_channel": 1},
+    {"name": "front_left",  "trig": 12, "echo": 6, "motor_channel": 0},
 ]
 
 # Stagger sensor triggering order to minimize ultrasonic crosstalk
@@ -40,6 +42,11 @@ try:
 except lgpio.error:
     chip_handle = lgpio.gpiochip_open(0)
 
+
+i2c = busio.I2C(board.SCL, board.SDA)
+pca = PCA9685(i2c)
+pca.frequency = 200
+
 devices = []
 
 for cfg in SENSORS_CONFIG:
@@ -50,7 +57,7 @@ for cfg in SENSORS_CONFIG:
             echo_pin=cfg["echo"], 
             chip_handle=chip_handle
         ),
-        "motor": PWMOutputDevice(cfg["motor_pin"]),
+        "motor": pca.channels[cfg["motor_channel"]],
         "buffer": deque(maxlen=3)
     })
 
@@ -96,16 +103,19 @@ try:
             # 4. Filter reading and set motor intensity
             if buffer:
                 filtered_dist = statistics.median(buffer)
-                motor.value = calculate_vibration_intensity(filtered_dist)
+                intensity = calculate_vibration_intensity(filtered_dist)
+                motor.duty_cycle = int(intensity * 65535)
             else:
-                motor.value = 0.0
+                motor.duty_cycle = 0
 
 finally:
     # Safely turn off motors and release sensor resources
     for dev in devices:
-        dev["motor"].value = 0
-        dev["motor"].close()
+        dev["motor"].duty_cycle = 0
         dev["sensor"].cleanup()
+        dev["sensor"].cleanup()
+
+    pca.deinit()
         
     try:
         lgpio.gpiochip_close(chip_handle)
